@@ -1,0 +1,12 @@
+# Large dataset files — not tracked
+STEW_Dataset/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS
+.DS_Store
+Thumbs.db

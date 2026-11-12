@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Human Behavior Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ── Variables & Reset ───────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:      #090e1a;
+  --s1:      #0d1427;  /* header / sidebar */
+  --s2:      #101829;  /* cards */
+  --s3:      #111e38;  /* hover */
+  --border:  #1b2a4a;
+  --blue:    #2563eb;
+  --blue2:   #3b82f6;
+  --green:   #22c55e;
+  --orange:  #f97316;
+  --yellow:  #f59e0b;
+  --red:     #ef4444;
+  --text:    #e2e8f0;
+  --sub:     #94a3b8;
+  --muted:   #4a5a7a;
+  --r:       10px;
+  --r2:      14px;
+}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.hdr{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:14px 24px;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.hdr h1{font-size:1.2rem;font-weight:700}
+.hdr p{font-size:.73rem;color:var(--sub);margin-top:1px}
+.hdr-icon{font-size:1.5rem;opacity:.8}
+
+/* ── Tab nav ─────────────────────────────────────────── */
+.tabs{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  display:flex;padding:0 24px;flex-shrink:0;
+}
+.tab{
+  display:flex;align-items:center;gap:7px;
+  padding:12px 22px;background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--sub);font-size:.85rem;font-weight:500;cursor:pointer;
+  transition:color .18s;margin-bottom:-1px;
+}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--text);border-bottom-color:var(--blue)}
+.tab-ic{font-size:1rem}
+
+/* ── Body layout ─────────────────────────────────────── */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ─────────────────────────────────────────── */
+.side{
+  width:310px;flex-shrink:0;background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.side-scroll{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+
+.sec-title{font-size:.95rem;font-weight:700}
+.sec-sub{font-size:.72rem;color:var(--sub);margin-top:3px}
+
+/* upload */
+.upload-box{
+  background:var(--s2);border:1.5px dashed var(--border);border-radius:var(--r);
+  padding:18px 14px;display:flex;align-items:center;justify-content:center;gap:9px;
+  cursor:pointer;color:var(--sub);font-size:.83rem;position:relative;
+  transition:border-color .2s,background .2s;
+}
+.upload-box:hover{border-color:var(--blue2);background:var(--s3)}
+.upload-box.ok{border-color:var(--blue2);border-style:solid;color:var(--text)}
+.upload-box input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+.btn-go{
+  width:100%;padding:13px;background:var(--blue);border:none;border-radius:var(--r);
+  color:#fff;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .2s,opacity .2s;
+}
+.btn-go:hover:not(:disabled){background:#1d4fd8}
+.btn-go:disabled{opacity:.45;cursor:not-allowed}
+
+/* live result */
+.live-result{
+  display:none;border-radius:var(--r);overflow:hidden;
+  border:1px solid var(--border);
+}
+.live-result.show{display:flex}
+.lr-cell{flex:1;background:var(--s2);padding:12px 16px;border-right:1px solid var(--border)}
+.lr-cell:last-child{border-right:none}
+.lr-cell label{font-size:.68rem;color:var(--sub);display:block;text-transform:uppercase;letter-spacing:.6px}
+.lr-cell .v{font-size:1.15rem;font-weight:800;margin-top:3px}
+.v-rest{color:var(--green)}.v-multi{color:var(--orange)}.v-conf{color:var(--text)}
+
+/* divider */
+.div{height:1px;background:var(--border);flex-shrink:0}
+
+/* filter pills */
+.pills{display:flex;gap:6px}
+.pill{
+  flex:1;padding:7px 0;border-radius:20px;border:1px solid var(--border);
+  background:transparent;color:var(--sub);font-size:.73rem;font-weight:600;
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.pill.p-all  {background:#2563eb18;border-color:var(--blue); color:var(--blue2)}
+.pill.p-hi   {background:#f9731618;border-color:var(--orange);color:var(--orange)}
+.pill.p-lo   {background:#22c55e18;border-color:var(--green); color:var(--green)}
+
+/* subject list */
+.sub-list{display:flex;flex-direction:column;gap:3px}
+.sub-item{
+  display:flex;align-items:center;gap:9px;
+  background:var(--s2);border:1px solid var(--border);border-left:3px solid transparent;
+  border-radius:var(--r);padding:9px 11px;cursor:pointer;transition:all .15s;
+}
+.sub-item:hover{background:var(--s3)}
+.sub-item.on{border-left-color:var(--blue);background:#2563eb12}
+.sub-dot{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.68rem;font-weight:800;
+}
+.d-hi{background:#f9731614;color:var(--orange)}
+.d-lo{background:#22c55e14;color:var(--green)}
+.sub-name{flex:1}
+.sub-name strong{font-size:.8rem;display:block}
+.sub-name span{font-size:.68rem;color:var(--sub)}
+.sub-pct{font-size:.8rem;font-weight:700}
+.hi{color:var(--green)}.mid{color:var(--yellow)}.lo{color:var(--red)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ── Main panel ──────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* KPI strip */
+.kpi-strip{display:flex;gap:10px}
+.kpi{
+  flex:1;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r2);padding:14px 16px;
+}
+.kpi-lbl{font-size:.68rem;color:var(--sub);text-transform:uppercase;letter-spacing:.7px}
+.kpi-val{font-size:1.75rem;font-weight:800;margin-top:4px;line-height:1}
+.kpi-hint{font-size:.68rem;color:var(--muted);margin-top:4px}
+
+/* chart grid */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cc{background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.cc.w2{grid-column:1/-1}
+.cc h4{font-size:.68rem;color:var(--sub);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
+
+/* stat bar at bottom */
+.stat-bar{
+  display:flex;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);
+  flex-shrink:0;
+}
+.sc{flex:1;background:var(--s2);padding:12px 16px;border-right:1px solid var(--border)}
+.sc:last-child{border-right:none}
+.sc label{font-size:.68rem;color:var(--sub);display:block;text-transform:uppercase;letter-spacing:.6px}
+.sc .sv{font-size:1.1rem;font-weight:800;margin-top:3px}
+
+/* placeholder */
+.ph{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;color:var(--muted);text-align:center;
+}
+.ph .pi{font-size:2.5rem;opacity:.35}
+.ph p{font-size:.82rem}
+
+/* spinner */
+.spin{
+  width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--blue);
+  border-radius:50%;animation:rot 1s linear infinite;
+}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* accuracy badge in header */
+.badge{
+  padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;
+  display:inline-block;
+}
+.badge-acc{background:#2563eb20;color:var(--blue2);border:1px solid var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="hdr">
+  <div>
+    <h1>Human Behavior Analysis</h1>
+    <p>Machine Learning Dashboard &nbsp;·&nbsp; STEW EEG Dataset &nbsp;·&nbsp; Logistic Regression</p>
+  </div>
+  <span class="hdr-icon">🧠</span>
+</header>
+
+<!-- Tabs -->
+<nav class="tabs">
+  <button class="tab on" data-tab="cognitive"><span class="tab-ic">🧠</span>Cognitive</button>
+  <button class="tab"    data-tab="activity" ><span class="tab-ic">⚡</span>Activity</button>
+  <button class="tab"    data-tab="emotion"  ><span class="tab-ic">💛</span>Emotion</button>
+</nav>
+
+<!-- App body -->
+<div class="body">
+
+  <!-- ── Sidebar ── -->
+  <aside class="side">
+    <div class="side-scroll">
+
+      <!-- Upload section -->
+      <div>
+        <div class="sec-title">Cognitive Workload Analysis</div>
+        <div class="sec-sub">Upload a raw EEG recording (.txt, 14 channels)</div>
+      </div>
+
+      <label class="upload-box" id="uploadBox">
+        <span>☁️</span><span id="uploadTxt">Select EEG file</span>
+        <input type="file" accept=".txt" id="eegFile" onchange="onFile(this)"/>
+      </label>
+
+      <button class="btn-go" id="goBtn" onclick="doAnalyze()" disabled>Analyze Workload</button>
+
+      <div class="live-result" id="liveResult">
+        <div class="lr-cell">
+          <label>Prediction</label>
+          <div class="v" id="livePred">—</div>
+        </div>
+        <div class="lr-cell">
+          <label>Confidence</label>
+          <div class="v v-conf" id="liveConf">—</div>
+        </div>
+      </div>
+
+      <div class="div"></div>
+
+      <!-- Dataset browser -->
+      <div>
+        <div class="sec-title" style="font-size:.85rem">Dataset Browser</div>
+        <div class="sec-sub">48 subjects · Rest vs Multitasking · 37 windows each</div>
+      </div>
+
+      <div class="pills" id="pills">
+        <button class="pill p-all" onclick="setF('all',this)">All</button>
+        <button class="pill"       onclick="setF('hi',this)" >🔴 Multitasking</button>
+        <button class="pill"       onclick="setF('lo',this)" >🟢 Rest</button>
+      </div>
+
+      <div class="sub-list" id="subList"></div>
+    </div>
+  </aside>
+
+  <!-- ── Main panel ── -->
+  <main class="main" id="main">
+    <div class="ph">
+      <div class="spin"></div>
+      <p>Loading results …</p>
+    </div>
+  </main>
+
+</div><!-- /body -->
+
+<script>
+/* ── Globals ─────────────────────────────── */
+Chart.defaults.color       = '#4a5a7a';
+Chart.defaults.borderColor = '#1b2a4a';
+Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
+
+let D = null, filter = 'all', curIdx = 0, CH = {};
+
+/* ── Load data ───────────────────────────── */
+fetch('results.json')
+  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d=>{ D=d; init(); })
+  .catch(e=>{
+    document.getElementById('main').innerHTML=`<div class="ph">
+      <span class="pi">⚠️</span>
+      <strong style="color:var(--text)">results.json not found</strong>
+      <p>Run <code style="background:var(--s2);padding:2px 8px;border-radius:5px">python run_inference.py</code><br>then refresh, or serve via <code>python -m http.server 8080</code></p>
+      <p style="color:var(--red);font-size:.72rem">${e.message}</p>
+    </div>`;
+  });
+
+/* ── Init ────────────────────────────────── */
+function init(){
+  buildList();
+  show(D.subjects[0]);
+}
+
+/* ── Filter ──────────────────────────────── */
+function setF(f, btn){
+  filter=f;
+  document.querySelectorAll('.pill').forEach(p=>p.className='pill');
+  btn.className=`pill p-${f}`;
+  buildList();
+}
+
+/* ── Subject list ────────────────────────── */
+function buildList(){
+  const el=document.getElementById('subList');
+  el.innerHTML='';
+  const list = filter==='all' ? D.subjects : D.subjects.filter(s=>s.condition===filter);
+  list.forEach(s=>{
+    const gi=D.subjects.indexOf(s);
+    const isH=s.condition==='hi';
+    const a=s.accuracy;
+    const ac=a>=70?'hi':a>=45?'mid':'lo';
+    const d=document.createElement('div');
+    d.className='sub-item'+(gi===curIdx?' on':'');
+    d.innerHTML=`
+      <div class="sub-dot ${isH?'d-hi':'d-lo'}">S${String(s.subject).padStart(2,'0')}</div>
+      <div class="sub-name">
+        <strong>${isH?'Multitasking':'Rest'} · Sub ${s.subject}</strong>
+        <span>${a}% acc &nbsp;·&nbsp; ${(s.mean_prob_multitasking*100).toFixed(0)}% avg P(M)</span>
+      </div>
+      <div class="sub-pct ${ac}">${a}%</div>`;
+    d.onclick=()=>{ curIdx=gi; buildList(); show(s); };
+    el.appendChild(d);
+  });
+}
+
+/* ── Destroy charts ──────────────────────── */
+function killCharts(){ Object.values(CH).forEach(c=>c.destroy()); CH={}; }
+
+/* ── Accent color ────────────────────────── */
+function ac(a){ return a>=70?'var(--green)':a>=45?'var(--yellow)':'var(--red)'; }
+
+/* ── Show subject detail ─────────────────── */
+function show(s){
+  killCharts();
+  const isH   = s.condition==='hi';
+  const col   = isH?'var(--orange)':'var(--green)';
+  const lbl   = isH?'Multitasking':'Rest';
+  const conf  = (s.mean_prob_multitasking*100).toFixed(1);
+  const nR    = s.predictions.filter(p=>p===0).length;
+  const nM    = s.predictions.filter(p=>p===1).length;
+  const diff  = s.ratings?.difficulty;
+  const fat   = s.ratings?.fatigue;
+
+  document.getElementById('main').innerHTML=`
+
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi">
+        <div class="kpi-lbl">Prediction</div>
+        <div class="kpi-val" style="color:${col}">${lbl}</div>
+        <div class="kpi-hint">True label: ${s.true_label}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Confidence</div>
+        <div class="kpi-val" style="color:${col}">${conf}%</div>
+        <div class="kpi-hint">Mean P(Multitasking)</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Model Accuracy</div>
+        <div class="kpi-val" style="color:${ac(s.accuracy)}">${s.accuracy}%</div>
+        <div class="kpi-hint">${s.n_windows} × 4s windows</div>
+      </div>
+      ${diff!=null?`<div class="kpi">
+        <div class="kpi-lbl">Self-Rating</div>
+        <div class="kpi-val" style="color:var(--blue2)">${diff}<span style="font-size:1rem;color:var(--muted)">/9</span></div>
+        <div class="kpi-hint">Difficulty &nbsp;·&nbsp; Fatigue: ${fat}/9</div>
+      </div>`:''}
+    </div>
+
+    <!-- Timeline (full width) -->
+    <div class="cg">
+      <div class="cc w2">
+        <h4>Multitasking Probability — per 4s window</h4>
+        <canvas id="cTime" height="80"></canvas>
+      </div>
+
+      <!-- Band power bar -->
+      <div class="cc">
+        <h4>EEG Band Power (avg across channels)</h4>
+        <canvas id="cBand"></canvas>
+      </div>
+
+      <!-- Prediction split donut -->
+      <div class="cc">
+        <h4>Window-Level Prediction Split</h4>
+        <canvas id="cDnt"></canvas>
+      </div>
+    </div>
+
+    <!-- Summary stat bar -->
+    <div class="stat-bar">
+      <div class="sc">
+        <label>Subject</label>
+        <div class="sv">Sub ${String(s.subject).padStart(2,'0')} &nbsp;<span style="color:${col};font-size:.85rem">${lbl}</span></div>
+      </div>
+      <div class="sc">
+        <label>Predicted Multitasking</label>
+        <div class="sv">${nM} / ${s.n_windows} windows</div>
+      </div>
+      <div class="sc">
+        <label>Predicted Rest</label>
+        <div class="sv">${nR} / ${s.n_windows} windows</div>
+      </div>
+      <div class="sc">
+        <label>Dataset Overall Acc</label>
+        <div class="sv">${D.overall_accuracy}%</div>
+      </div>
+    </div>`;
+
+  /* ── Chart 1: Timeline ── */
+  CH.t = new Chart(document.getElementById('cTime'),{
+    type:'line',
+    data:{
+      labels: s.windows_time.map(t=>t.toFixed(0)+'s'),
+      datasets:[{
+        data: s.probabilities.map(p=>+(p*100).toFixed(2)),
+        borderColor: isH?'#f97316':'#22c55e',
+        backgroundColor: isH?'#f9731614':'#22c55e14',
+        borderWidth:2, fill:true, tension:0.3,
+        pointRadius:0, pointHoverRadius:5,
+        pointBackgroundColor: isH?'#f97316':'#22c55e',
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        annotation:{annotations:{t50:{
+          type:'line',yMin:50,yMax:50,
+          borderColor:'#ffffff25',borderWidth:1,borderDash:[5,4],
+          label:{content:'50%',display:true,position:'end',
+            color:'#4a5a7a',font:{size:10},backgroundColor:'transparent'}
+        }}},
+        tooltip:{callbacks:{label:c=>` ${c.parsed.y.toFixed(1)}% P(Multitasking)`}}
+      },
+      scales:{
+        y:{min:0,max:100,
+          ticks:{callback:v=>v+'%',stepSize:25},
+          grid:{color:'#1b2a4a'},
+          title:{display:true,text:'P(Multitasking)',color:'#4a5a7a',font:{size:11}}},
+        x:{ticks:{maxTicksLimit:16,color:'#4a5a7a'},grid:{color:'#1b2a4a'}}
+      }
+    }
+  });
+
+  /* ── Chart 2: Band power ── */
+  const bk=Object.keys(s.band_avg);
+  const bv=Object.values(s.band_avg);
+  const bc=['#6366f1','#0ea5e9','#22c55e','#f59e0b','#f97316'];
+  CH.b = new Chart(document.getElementById('cBand'),{
+    type:'bar',
+    data:{
+      labels:bk.map(b=>b[0].toUpperCase()+b.slice(1)),
+      datasets:[{
+        data:bv,
+        backgroundColor:bc.map(c=>c+'33'),
+        borderColor:bc,borderWidth:2,
+        borderRadius:6,borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{grid:{color:'#1b2a4a'},ticks:{color:'#4a5a7a'},
+          title:{display:true,text:'µV²/Hz',color:'#4a5a7a',font:{size:10}}},
+        x:{grid:{display:false},ticks:{color:'#94a3b8'}}
+      }
+    }
+  });
+
+  /* ── Chart 3: Donut ── */
+  CH.d = new Chart(document.getElementById('cDnt'),{
+    type:'doughnut',
+    data:{
+      labels:['Rest','Multitasking'],
+      datasets:[{
+        data:[nR,nM],
+        backgroundColor:['#22c55e18','#f9731618'],
+        borderColor:['#22c55e','#f97316'],
+        borderWidth:2,hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:true,cutout:'65%',
+      plugins:{
+        legend:{position:'bottom',
+          labels:{color:'#94a3b8',boxWidth:10,padding:14,font:{size:12}}},
+        tooltip:{callbacks:{
+          label:c=>` ${c.label}: ${c.parsed} (${(c.parsed/s.n_windows*100).toFixed(1)}%)`
+        }}
+      }
+    }
+  });
+}
+
+/* ── Tab switching ───────────────────────── */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');
+    if(t.dataset.tab!=='cognitive'){
+      killCharts();
+      document.getElementById('main').innerHTML=`<div class="ph">
+        <span class="pi">${t.dataset.tab==='activity'?'⚡':'💛'}</span>
+        <strong style="color:var(--text)">${t.dataset.tab[0].toUpperCase()+t.dataset.tab.slice(1)} Analysis</strong>
+        <p>Not available in this dataset.<br>Switch to <strong>Cognitive</strong> to explore EEG workload data.</p>
+      </div>`;
+    } else if(D){ show(D.subjects[curIdx]); }
+  };
+});
+
+/* ── File upload ─────────────────────────── */
+let eegRaw=null;
+function onFile(inp){
+  const f=inp.files[0]; if(!f)return;
+  document.getElementById('uploadTxt').textContent=f.name;
+  document.getElementById('uploadBox').classList.add('ok');
+  document.getElementById('goBtn').disabled=false;
+  const r=new FileReader();
+  r.onload=e=>{ eegRaw=e.target.result.trim().split('\n').map(l=>l.trim().split(/\s+/).map(Number)); };
+  r.readAsText(f);
+}
+
+function doAnalyze(){
+  if(!eegRaw)return;
+  const btn=document.getElementById('goBtn');
+  btn.disabled=true; btn.textContent='Analyzing…';
+
+  // Run in next tick to allow UI update
+  setTimeout(()=>{
+    try{
+      const FS=128,WIN=512;
+      const BANDS={delta:[1,4],theta:[4,8],alpha:[8,13],beta:[13,30],gamma:[30,45]};
+      const nS=eegRaw.length, nC=14;
+      const raw=Array.from({length:nC},(_,c)=>eegRaw.map(r=>r[c]||0));
+      let probs=[];
+      for(let st=0;st+WIN<=nS;st+=WIN){
+        let alpha=0,beta=0,delta=0,gamma=0;
+        for(let c=0;c<nC;c++){
+          const ep=raw[c].slice(st,st+WIN);
+          delta+=bp(ep,FS,1,4); alpha+=bp(ep,FS,8,13);
+          beta+=bp(ep,FS,13,30); gamma+=bp(ep,FS,30,45);
+        }
+        const r=(beta+gamma)/(alpha+delta+1e-9);
+        probs.push(Math.min(1,Math.max(0,r/(r+1))));
+      }
+      const mp=probs.reduce((a,b)=>a+b,0)/probs.length;
+      const pred=mp>=0.5?'Multitasking':'Rest';
+      const conf=(pred==='Multitasking'?mp:1-mp);
+      const pe=document.getElementById('livePred');
+      pe.textContent=pred;
+      pe.className='v '+(pred==='Multitasking'?'v-multi':'v-rest');
+      document.getElementById('liveConf').textContent=(conf*100).toFixed(0)+'%';
+      document.getElementById('liveResult').classList.add('show');
+    }catch(e){alert('Error analyzing file: '+e.message);}
+    btn.disabled=false; btn.textContent='Analyze Workload';
+  },50);
+}
+
+/* FFT-based band power (Cooley-Tukey, power of 2 only) */
+function bp(sig,fs,lo,hi){
+  const N=nextPow2(sig.length);
+  const padded=new Float64Array(N);
+  sig.forEach((v,i)=>padded[i]=v);
+  const fft=fftReal(padded);
+  const fRes=fs/N;
+  const i0=Math.round(lo/fRes), i1=Math.min(Math.round(hi/fRes),N/2-1);
+  let p=0;
+  for(let k=i0;k<=i1;k++) p+=(fft[k]*fft[k])/(N*N)*fRes;
+  return p;
+}
+function nextPow2(n){let p=1;while(p<n)p<<=1;return p;}
+function fftReal(x){
+  // Returns magnitude spectrum (DFT via Cooley-Tukey)
+  const N=x.length;
+  if(N===1)return new Float64Array([Math.abs(x[0])]);
+  const even=new Float64Array(N/2), odd=new Float64Array(N/2);
+  for(let i=0;i<N/2;i++){even[i]=x[2*i];odd[i]=x[2*i+1];}
+  const E=fftComplex(Array.from(even)), O=fftComplex(Array.from(odd));
+  const mag=new Float64Array(N/2);
+  for(let k=0;k<N/2;k++){
+    const a=2*Math.PI*k/N;
+    const tr=Math.cos(a)*O[k][0]-Math.sin(a)*O[k][1];
+    const ti=Math.cos(a)*O[k][1]+Math.sin(a)*O[k][0];
+    mag[k]=Math.sqrt((E[k][0]+tr)**2+(E[k][1]+ti)**2);
+  }
+  return mag;
+}
+function fftComplex(x){
+  const N=x.length;
+  if(N===1)return [[x[0],0]];
+  const even=[],odd=[];
+  for(let i=0;i<N;i++)(i%2===0?even:odd).push(x[i]);
+  const E=fftComplex(even),O=fftComplex(odd);
+  const out=new Array(N);
+  for(let k=0;k<N/2;k++){
+    const a=-2*Math.PI*k/N;
+    const tr=Math.cos(a)*O[k][0]-Math.sin(a)*O[k][1];
+    const ti=Math.cos(a)*O[k][1]+Math.sin(a)*O[k][0];
+    out[k]=[E[k][0]+tr,E[k][1]+ti];
+    out[k+N/2]=[E[k][0]-tr,E[k][1]-ti];
+  }
+  return out;
+}
+</script>
+</body>
+</html>
